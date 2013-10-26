@@ -72,6 +72,10 @@ value([{}], {Handler, State}, _Config) ->
     Handler:handle_event(end_object, Handler:handle_event(start_object, State));
 value([], {Handler, State}, _Config) ->
     Handler:handle_event(end_array, Handler:handle_event(start_array, State));
+value(List, {Handler, State}, _Config) when is_map(List), map_size(List) == 0 ->
+    Handler:handle_event(end_object, Handler:handle_event(start_object, State));
+value(List, Handler, Config) when is_map(List) ->
+    list_or_object(maps:to_list(List), Handler, Config);
 value(List, Handler, Config) when is_list(List) ->
     list_or_object(List, Handler, Config);
 value(Term, Handler, Config) -> ?error(value, Term, Handler, Config).
@@ -292,7 +296,7 @@ error_test_() ->
     ].
 
 custom_error_handler_test_() ->
-    Error = fun(Term, {_, State, _}, _) -> {State, Term} end, 
+    Error = fun(Term, {_, State, _}, _) -> {State, Term} end,
     [
         {"value error", ?_assertEqual(
             {value, self()},

@@ -37,13 +37,13 @@ nested_array() ->
     }].
 
 
-empty_object() -> [{"{}", <<"{}">>, [{}], [start_object, end_object]}].
+empty_object() -> [{"{}", <<"{}">>, #{}, [start_object, end_object]}].
 
 nested_object() ->
     [{
         "{\"key\":{\"key\":{}}}",
         <<"{\"key\":{\"key\":{}}}">>,
-        [{<<"key">>, [{<<"key">>, [{}]}]}],
+        #{<<"key">> => #{<<"key">> => #{}}},
         [
             start_object,
                 {key, <<"key">>},
@@ -154,7 +154,7 @@ compound_object() ->
     [{
         "[{\"alpha\":[1,2,3],\"beta\":{\"alpha\":[1.0,2.0,3.0],\"beta\":[true,false]}},[{}]]",
         <<"[{\"alpha\":[1,2,3],\"beta\":{\"alpha\":[1.0,2.0,3.0],\"beta\":[true,false]}},[{}]]">>,
-        [[{<<"alpha">>, [1, 2, 3]}, {<<"beta">>, [{<<"alpha">>, [1.0, 2.0, 3.0]}, {<<"beta">>, [true, false]}]}], [[{}]]],
+        [#{<<"alpha">> => [1, 2, 3], <<"beta">> => #{<<"alpha">> => [1.0, 2.0, 3.0], <<"beta">> => [true, false]}}, [#{}]],
         [
             start_array,
                 start_object,
@@ -201,7 +201,7 @@ wrap_with_object({Title, JSON, Term, Events}) ->
     {
         "{\"key\":" ++ Title ++ "}",
         <<"{\"key\":", JSON/binary, "}">>,
-        [{<<"key">>, Term}],
+        #{<<"key">> => Term},
         [start_object, {key, <<"key">>}] ++ Events ++ [end_object]
     }.
 

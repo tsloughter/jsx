@@ -81,28 +81,30 @@ init(Config) -> {[[]], parse_config(Config)}.
 
 -spec handle_event(Event::any(), State::state()) -> state().
 
-handle_event(end_json, {[[Terms]], _Config}) -> Terms;
+handle_event(end_json, {[[Terms]], _Config}) ->
+    Terms;
 
-handle_event(start_object, {Terms, Config}) -> {[[]|Terms], Config};
+handle_event(start_object, {Terms, Config}) -> {[#{}|Terms], Config};
 handle_event(end_object, {[[], {key, Key}, Last|Terms], Config}) ->
-    {[[{Key, post_decode([{}], Config)}] ++ Last] ++ Terms, Config};
+    {[maps:put(Key, post_decode([{}], Config), Last)] ++ Terms, Config};
 handle_event(end_object, {[Object, {key, Key}, Last|Terms], Config}) ->
-    {[[{Key, post_decode(lists:reverse(Object), Config)}] ++ Last] ++ Terms, Config};
+    {[maps:put(Key, post_decode(Object, Config), Last)] ++ Terms, Config};
 handle_event(end_object, {[[], Last|Terms], Config}) ->
     {[[post_decode([{}], Config)] ++ Last] ++ Terms, Config};
 handle_event(end_object, {[Object, Last|Terms], Config}) ->
-    {[[post_decode(lists:reverse(Object), Config)] ++ Last] ++ Terms, Config};
+    {[[post_decode(Object, Config)] ++ Last] ++ Terms, Config};
 
 handle_event(start_array, {Terms, Config}) -> {[[]|Terms], Config};
 handle_event(end_array, {[List, {key, Key}, Last|Terms], Config}) ->
-    {[[{Key, post_decode(lists:reverse(List), Config)}] ++ Last] ++ Terms, Config};
+    {[maps:put(Key, post_decode(lists:reverse(List), Config), Last)] ++ Terms, Config};
 handle_event(end_array, {[List, Last|Terms], Config}) ->
     {[[post_decode(lists:reverse(List), Config)] ++ Last] ++ Terms, Config};
 
-handle_event({key, Key}, {Terms, Config}) -> {[{key, format_key(Key, Config)}] ++ Terms, Config};
+handle_event({key, Key}, {Terms, Config}) ->
+    {[{key, format_key(Key, Config)}] ++ Terms, Config};
 
 handle_event({_, Event}, {[{key, Key}, Last|Terms], Config}) ->
-    {[[{Key, post_decode(Event, Config)}] ++ Last] ++ Terms, Config};
+    {[maps:put(Key, post_decode(Event, Config), Last)] ++ Terms, Config};
 handle_event({_, Event}, {[Last|Terms], Config}) ->
     {[[post_decode(Event, Config)] ++ Last] ++ Terms, Config}.
 
@@ -183,9 +185,9 @@ format_key_test_() ->
 
 post_decoders_test_() ->
     Events = [
-        [{}],
-        [{<<"key">>, <<"value">>}],
-        [{<<"true">>, true}, {<<"false">>, false}, {<<"null">>, null}],
+        #{},
+        #{<<"key">> => <<"value">>},
+        #{<<"true">> => true, <<"false">> => false, <<"null">> => null},
         [],
         [<<"string">>],
         [true, false, null],
@@ -204,9 +206,9 @@ post_decoders_test_() ->
         )},
         {"replace arrays with empty arrays", ?_assertEqual(
             [
-                [{}],
-                [{<<"key">>, <<"value">>}],
-                [{<<"true">>, true}, {<<"false">>, false}, {<<"null">>, null}],
+                #{},
+                #{<<"key">> => <<"value">>},
+                #{<<"true">> => true, <<"false">> => false, <<"null">> => null},
                 [],
                 [],
                 [],
@@ -225,9 +227,9 @@ post_decoders_test_() ->
         )},
         {"replace objects with empty objects", ?_assertEqual(
             [
-                [{}],
-                [{}],
-                [{}],
+                #{},
+                #{},
+                #{},
                 [],
                 [<<"string">>],
                 [true, false, null],
@@ -240,15 +242,15 @@ post_decoders_test_() ->
                 1.0
             ],
             [ post_decode(Event, #config{
-                    post_decode=fun([T|_]) when is_tuple(T) -> [{}]; (V) -> V end
+                    post_decode=fun(V) when is_map(V) -> #{}; (V) -> V end
                 }) || Event <- Events
             ]
         )},
         {"replace all non-array/non-object values with false", ?_assertEqual(
             [
-                [{}],
-                [{<<"key">>, <<"value">>}],
-                [{<<"true">>, true}, {<<"false">>, false}, {<<"null">>, null}],
+                #{},
+                #{<<"key">> => <<"value">>},
+                #{<<"true">> => true, <<"false">> => false, <<"null">> => null},
                 [],
                 [<<"string">>],
                 [true, false, null],
@@ -261,15 +263,15 @@ post_decoders_test_() ->
                 false
             ],
             [ post_decode(Event, #config{
-                    post_decode=fun(V) when is_list(V) -> V; (_) -> false end
+                    post_decode=fun(V) when is_list(V) ; is_map(V) -> V; (_) -> false end
                 }) || Event <- Events
             ]
         )},
         {"atoms_to_strings", ?_assertEqual(
             [
-                [{}],
-                [{<<"key">>, <<"value">>}],
-                [{<<"true">>, true}, {<<"false">>, false}, {<<"null">>, null}],
+                #{},
+                #{<<"key">> => <<"value">>},
+                #{<<"true">> => true, <<"false">> => false, <<"null">> => null},
                 [],
                 [<<"string">>],
                 [true, false, null],
